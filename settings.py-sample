@@ -9,3 +9,7 @@ EMAIL_FROM = "somerandomemail@gmail.com"
 EMAIL_REPLY_TO = ["someoneelse@gmail.com"]
 DEFAULT_SUBSCRIBER_NAME = "Piero Brandola"
 DEFAULT_SUBSCRIBER_EMAIL = "piero@brandola.com"
+NUVOLA_USER = "nuvolauser"
+NUVOLA_PASSWORD = "nuvolapassword"
+TELEGRAM_BOT_TOKEN = "abcdefghijklmnopqrstuvwxyz"  # @some_kind_of_bot
+TELEGRAM_USER = "123456789"  # @my_telegram_user_name

@@ -11,9 +11,6 @@ PBOTS main program.
 :license: GNU AGPL version 3, see LICENSE for more details.
 """
 
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import json
 import logging
 import logging.handlers as handlers
@@ -24,16 +21,20 @@ import sqlite3
 import ssl  # noqa
 import subprocess
 import sys
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Any, Dict, List
 
 import jinja2
-
 
 # Check whether the settings are in place
 try:
     import settings
 except ModuleNotFoundError:
-    print("Please create a settings.py configuration file prior to running PBOTS.")
+    print(
+        "Please create a settings.py configuration file prior to running PBOTS."
+    )
     print("You may use settings.py-sample as reference.")
     sys.exit(1)
 
@@ -123,6 +124,12 @@ SOURCES = [
         "varname": "notizie_dd_mazzini",
         "scraper": "python scraper/notizie-dd-mazzini.py",
     },
+    {
+        "id": 15,
+        "name": "Bacheca Nuvola",
+        "varname": "bacheca_nuvola",
+        "scraper": "python scraper/bacheca-nuvola.py",
+    },
 ]
 
 
@@ -133,10 +140,14 @@ def create_logger(name: str) -> logging.Logger:
     if not os.path.exists("logs"):
         os.mkdir("logs")
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)  # Set to debug to view the output of the scrapers
+    logger.setLevel(
+        logging.INFO
+    )  # Set to debug to view the output of the scrapers
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
     logHandler = handlers.RotatingFileHandler(
-        f"logs/{name}.log", maxBytes=2 ** 20, backupCount=4,
+        f"logs/{name}.log",
+        maxBytes=2**20,
+        backupCount=4,
     )
     logHandler.setLevel(logging.INFO)
     logHandler.setFormatter(formatter)
@@ -220,7 +231,8 @@ def ensure_db():
         cur.execute("SELECT id FROM pbots_source WHERE id = :id", source)
         if not cur.fetchone():
             cur.execute(
-                "INSERT INTO pbots_source (id, last_pub_id) VALUES (:id, 0)", source
+                "INSERT INTO pbots_source (id, last_pub_id) VALUES (:id, 0)",
+                source,
             )
         cur.execute(
             "SELECT source_id FROM pbots_mailinglistmember WHERE source_id = :id",
@@ -293,11 +305,15 @@ def insert_publications(source_id: int, pubs: List[Dict[str, Any]]):
     conn.close()
 
 
-def get_new_publications(cur: sqlite3.Cursor, source_id: int) -> List[Dict[str, Any]]:
+def get_new_publications(
+    cur: sqlite3.Cursor, source_id: int
+) -> List[Dict[str, Any]]:
     """
     Return the publications for the specified source that havn't still been used in a newsletter.
     """
-    cur.execute("SELECT last_pub_id FROM pbots_source WHERE id = ?", (source_id,))
+    cur.execute(
+        "SELECT last_pub_id FROM pbots_source WHERE id = ?", (source_id,)
+    )
     last_pub_id = cur.fetchone()[0]
     cur.execute(
         "SELECT * FROM pbots_publication WHERE id > ? AND source_id = ?",
@@ -347,7 +363,9 @@ def send_newsletter(source_id: int, title: str):
         "publications": publications,
     }
     env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), "template")),
+        loader=jinja2.FileSystemLoader(
+            os.path.join(os.path.dirname(__file__), "template")
+        ),
         autoescape=jinja2.select_autoescape(["html", "xml"]),
     )
     template_plaintext = env.get_template("publications.txt")
@@ -378,9 +396,13 @@ def send_newsletter(source_id: int, title: str):
         message.attach(logo_mime)
         message.attach(MIMEText(body_html, "html"))
         for rec in recipients:
-            logger.info(f"Sending {title} to {rec['name']} <{rec['email']}>...")
+            logger.info(
+                f"Sending {title} to {rec['name']} <{rec['email']}>..."
+            )
             message["To"] = f"{rec['name']} <{rec['email']}>"
-            server.sendmail(settings.EMAIL_FROM, rec["email"], message.as_string())
+            server.sendmail(
+                settings.EMAIL_FROM, rec["email"], message.as_string()
+            )
     # Keep track of the publications that were just sent
     last_pub_id = max(pub["id"] for pub in publications)
     logger.info(f"Updating last publication ID to {last_pub_id}")
@@ -422,7 +444,9 @@ def run_source(source_id: int):
     Run the scraping and mailing processes for the specified source.
     """
     logger = loggers[source_id]
-    source = next(s for s in SOURCES if s["id"] == source_id)  # type: Dict[str, Any]
+    source = next(
+        s for s in SOURCES if s["id"] == source_id
+    )  # type: Dict[str, Any]
     logger.info(f"Running scraper for {source_id}: {source['varname']}...")
     scraper = source["scraper"]
     process = subprocess.Popen(
@@ -460,5 +484,7 @@ if __name__ == "__main__":
     try:
         run_source(source_id)
     except:  # noqa
-        logger.error("Uncaught error, see the source-specific log for for details")
+        logger.error(
+            "Uncaught error, see the source-specific log for for details"
+        )
         loggers[source_id].error("Uncaught error", exc_info=True)
