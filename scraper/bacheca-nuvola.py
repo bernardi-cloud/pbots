@@ -40,14 +40,14 @@ USER_AGENT = (
 
 
 class Nuvola:
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str, password: str, now: datetime):
         """
         Create a new instance of the Nuvola scraper.
         :param username: Nuvola user name
         :param password: Nuvola password
         :return: a list of dictionaries of publications and events
         """
-        self.now = datetime.now().replace(tzinfo=ZoneInfo("Europe/Rome"))
+        self.now = now
         self.session = requests.session()
         res = self.session.get("https://nuvola.madisoft.it/")
         csrf_token = (
@@ -186,11 +186,16 @@ def scrape() -> List[Dict[str, str]]:
     Scrape the register.
     :return: a list of dictionaries of publications and events
     """
-    nuvola = Nuvola(settings.NUVOLA_USER, settings.NUVOLA_PASSWORD)
-    bulletin = nuvola.get_bulletin_board()
-    events = nuvola.get_events()
-    nuvola.logout()
-    return events + bulletin
+    now = datetime.now().replace(tzinfo=ZoneInfo("Europe/Rome"))
+    # Between 7 and 8 AM check every 5 minutes, otherwise every 10
+    if now.hour == 7 or now.minute % 10 < 3:
+        nuvola = Nuvola(settings.NUVOLA_USER, settings.NUVOLA_PASSWORD, now)
+        bulletin = nuvola.get_bulletin_board()
+        events = nuvola.get_events()
+        nuvola.logout()
+        return events + bulletin
+    else:
+        return []
 
 
 if __name__ == "__main__":
